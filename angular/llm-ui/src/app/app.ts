@@ -1,10 +1,14 @@
-import { Component, OnDestroy, Type } from '@angular/core'; // Added Type
+import { Component, OnDestroy, Type } from '@angular/core'; 
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { LlmOutputDisplayComponent } from './components/llm-output-display/llm-output-display.component';
-import { LLMOutputBlock, LLMOutputFallbackBlock, MaybeLLMOutputMatch } from './models/llm-output-types'; // Added
-import { TextBlockComponent } from './components/text-block/text-block.component'; // Added
-import { FallbackBlockComponent } from './components/fallback-block/fallback-block.component'; // Added
+import { LLMOutputBlock, LLMOutputFallbackBlock, MaybeLLMOutputMatch } from './models/llm-output-types'; 
+import { TextBlockComponent } from './components/text-block/text-block.component'; 
+import { FallbackBlockComponent } from './components/fallback-block/fallback-block.component'; 
+// Added for JSON Block
+import { JsonBlockComponent } from './components/json-block/json-block.component';
+import { getJsonMatchers, getJsonLookBack, JsonBlockOptions } from './utils/json-block-utils';
+
 
 @Component({
   selector: 'app-root',
@@ -25,82 +29,93 @@ export class App implements OnDestroy {
   public testFallbackBlock: LLMOutputFallbackBlock;
 
   // Text streaming simulation
-  fullText = "This is a sample sentence. This is a keyword. And this is another sentence with the keyword again.";
-  chunkSize = 5;
-  intervalMs = 200; // ms per chunk
-  private currentIndex = 0; // Keep track of current index for streaming
-  private streamInterval: any; // Renamed from intervalId for clarity
+  fullText: string; 
+  chunkSize = 10; 
+  intervalMs = 100; 
+  private currentIndex = 0;
+  private streamInterval: any;
 
 
   constructor() {
-    // Define a simple block that matches "keyword"
-    this.testBlocks = [
-      {
-        component: TextBlockComponent as Type<any>, // Use TextBlockComponent
-        findCompleteMatch: (input: string): MaybeLLMOutputMatch => {
-          const keyword = "keyword";
-          const index = input.toLowerCase().indexOf(keyword.toLowerCase());
-          if (index !== -1) {
-            return {
-              startIndex: index,
-              endIndex: index + keyword.length,
-              outputRaw: input.substring(index, index + keyword.length)
+    // Keyword block definition
+    const keywordBlock: LLMOutputBlock = {
+      component: TextBlockComponent as Type<any>,
+      findCompleteMatch: (input: string): MaybeLLMOutputMatch => {
+        const keyword = "keyword";
+        const index = input.toLowerCase().indexOf(keyword.toLowerCase());
+        if (index !== -1) {
+          return { 
+            startIndex: index, 
+            endIndex: index + keyword.length, 
+            outputRaw: input.substring(index, index + keyword.length) 
+          };
+        }
+        return undefined;
+      },
+      findPartialMatch: (input: string): MaybeLLMOutputMatch => { 
+        const keyword = "keyword";
+        for (let i = keyword.length; i > 0; i--) {
+          const partialKeyword = keyword.substring(0, i);
+          // Ensure partial match is at the beginning of the current input segment
+          if (input.toLowerCase().startsWith(partialKeyword.toLowerCase())) {
+            return { 
+              startIndex: 0, // Relative to input string
+              endIndex: i, 
+              outputRaw: input.substring(0, i) 
             };
           }
-          return undefined;
-        },
-        findPartialMatch: (input: string): MaybeLLMOutputMatch => { 
-          const keyword = "keyword";
-          // Look for the keyword at the very beginning of the input string for partial match
-          if (input.toLowerCase().startsWith(keyword.toLowerCase().substring(0, input.length))) {
-            if (input.length <= keyword.length) { // Only match if it's a partial of "keyword"
-                 return {
-                    startIndex: 0,
-                    endIndex: input.length, // Match the partial input
-                    outputRaw: input
-                 };
-            }
-          }
-          // More sophisticated partial matching for "keyword" if it's not at the start:
-          // This part of the original logic was a bit confusing, let's try to match partials of "keyword"
-          for (let i = keyword.length; i > 0; i--) {
-            const partialKeyword = keyword.substring(0, i);
-            if (input.toLowerCase().startsWith(partialKeyword.toLowerCase())) {
-              return {
-                startIndex: 0,
-                endIndex: i,
-                outputRaw: input.substring(0, i)
-              };
-            }
-          }
-          return undefined;
-        },
-        lookBack: ({ output, isComplete, visibleTextLengthTarget }) => ({
-          output,
-          visibleText: output.slice(0, visibleTextLengthTarget),
-        }),
-      }
-    ];
-
-    this.testFallbackBlock = {
-      component: FallbackBlockComponent as Type<any>, // Use FallbackBlockComponent
-      lookBack: ({ output, isComplete, visibleTextLengthTarget }) => ({
-        output,
-        visibleText: output.slice(0, visibleTextLengthTarget),
+        }
+        return undefined;
+      },
+      lookBack: ({ output, isComplete, visibleTextLengthTarget }) => ({ 
+        output, 
+        visibleText: output.slice(0, visibleTextLengthTarget) 
       }),
     };
+
+    this.testFallbackBlock = {
+      component: FallbackBlockComponent as Type<any>,
+      lookBack: ({ output, isComplete, visibleTextLengthTarget }) => ({ 
+        output, 
+        visibleText: output.slice(0, visibleTextLengthTarget) 
+      }),
+    };
+
+    this.testBlocks = [keywordBlock]; // Initialize with keyword block
+
+    // JSON Block Definition
+    const userProfileOptions: JsonBlockOptions = {
+      type: 'user_profile',
+      startChar: 'JSON{', // Simplified delimiters for less escaping in string
+      endChar: '}JSON',
+      typeKey: 'messageType',
+      defaultVisible: false,
+      visibleKeyPaths: ['$.name', '$.details.age']
+    };
+    const jsonUserProfileBlock: LLMOutputBlock = {
+      component: JsonBlockComponent as Type<any>,
+      ...getJsonMatchers(userProfileOptions),
+      lookBack: getJsonLookBack(userProfileOptions),
+    };
+    this.testBlocks.push(jsonUserProfileBlock); // Add JSON block
+
+    // Update fullText to include JSON example
+    // Note: Using single quotes for the outer string to make escaping simpler for inner double quotes in JSON.
+    this.fullText = 'This is a sample sentence. This is a keyword. ' +
+                    'And this is another sentence with the keyword again. ' +
+                    'Now for some JSON: JSON{ "messageType": "user_profile", "name": "Alice", "details": { "age": 30, "city": "Wonderland" }, "status": "active" }JSON. ' +
+                    'Some trailing text.';
+    
     this.startStream();
   }
 
-  startStream(): void {
-    this.currentIndex = 0; // Reset current index
+  startStream(): void { 
+    this.currentIndex = 0;
     this.testLlmOutput = "";
     this.testIsStreamFinished = false;
-
     if (this.streamInterval) {
       clearInterval(this.streamInterval);
     }
-
     this.streamInterval = setInterval(() => {
       if (this.currentIndex < this.fullText.length) {
         const nextChunkEnd = Math.min(this.currentIndex + this.chunkSize, this.fullText.length);
@@ -114,7 +129,7 @@ export class App implements OnDestroy {
     }, this.intervalMs);
   }
 
-  ngOnDestroy(): void {
+  ngOnDestroy(): void { 
     if (this.streamInterval) {
       clearInterval(this.streamInterval);
     }

@@ -5,11 +5,12 @@ import { LlmOutputService, LlmOutputServiceState } from '../../services/llm-outp
 import { BlockMatch, LLMOutputBlock, LLMOutputFallbackBlock, LLMOutputComponent } from '../../models/llm-output-types'; // Adjust path
 import { FallbackBlockComponent } from '../fallback-block/fallback-block.component'; // Adjust path
 import { TextBlockComponent } from '../text-block/text-block.component'; // Adjust path
+import { JsonBlockComponent } from '../json-block/json-block.component'; // ADD THIS
 
 @Component({
   selector: 'app-llm-output-display',
   standalone: true,
-  imports: [CommonModule, FallbackBlockComponent, TextBlockComponent], // Import necessary modules and components
+  imports: [CommonModule, FallbackBlockComponent, TextBlockComponent, JsonBlockComponent], // ADD JsonBlockComponent HERE
   templateUrl: './llm-output-display.component.html',
   styleUrls: ['./llm-output-display.component.css'],
   // providers: [LlmOutputService] // LlmOutputService is providedIn: 'root'
