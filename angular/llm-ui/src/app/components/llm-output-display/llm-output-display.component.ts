@@ -5,12 +5,14 @@ import { LlmOutputService, LlmOutputServiceState } from '../../services/llm-outp
 import { BlockMatch, LLMOutputBlock, LLMOutputFallbackBlock, LLMOutputComponent } from '../../models/llm-output-types'; // Adjust path
 import { FallbackBlockComponent } from '../fallback-block/fallback-block.component'; // Adjust path
 import { TextBlockComponent } from '../text-block/text-block.component'; // Adjust path
-import { JsonBlockComponent } from '../json-block/json-block.component'; // ADD THIS
+import { JsonBlockComponent } from '../json-block/json-block.component';
+import { CsvBlockComponent } from '../csv-block/csv-block.component';
+import { CodeBlockComponent } from '../code-block/code-block.component'; // ADD THIS
 
 @Component({
   selector: 'app-llm-output-display',
   standalone: true,
-  imports: [CommonModule, FallbackBlockComponent, TextBlockComponent, JsonBlockComponent], // ADD JsonBlockComponent HERE
+  imports: [CommonModule, FallbackBlockComponent, TextBlockComponent, JsonBlockComponent, CsvBlockComponent, CodeBlockComponent], // ADD CodeBlockComponent HERE
   templateUrl: './llm-output-display.component.html',
   styleUrls: ['./llm-output-display.component.css'],
   // providers: [LlmOutputService] // LlmOutputService is providedIn: 'root'

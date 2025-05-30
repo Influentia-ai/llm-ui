@@ -24,6 +24,7 @@
     "micromark-extension-gfm": "^3.0.0",
     "remeda": "^2.22.3",
     "rxjs": "~7.8.0",
+    "shiki": "^3.4.2",
     "tslib": "^2.3.0",
     "unist-util-visit": "^5.0.0",
     "zone.js": "~0.15.0"
